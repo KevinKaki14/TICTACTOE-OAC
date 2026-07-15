@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tic Tac Toe 3D · Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-root:#fdf3e7;
+    --bg-header:#fffaf3;
+    --bg-panel:#ffffff;
+    --cell-bg:#fbf1e2;
+    --cell-border:#e8d8bd;
+    --cell-hover:#ffe3c2;
+    --gold:#ef6a4c;
+    --gold-dim:#c94f34;
+    --steel:#1f9e8b;
+    --steel-dim:#157567;
+    --crimson:#ffce54;
+    --crimson-text:#5a3d00;
+    --text-light:#2e2418;
+    --text-muted:#9c8c74;
+    --text-danger:#d84343;
+    --font: 'Nunito', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    --font-display: 'Baloo 2', var(--font);
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 10%, #ffe4c4 0%, transparent 45%),
+      radial-gradient(circle at 85% 90%, #cdf1e8 0%, transparent 45%),
+      var(--bg-root);
+    color:var(--text-light);
+    font-family:var(--font);
+  }
+  h1,h2,h3{ margin:0; font-family:var(--font-display); }
+  button{ font-family:var(--font-display); cursor:pointer; }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+
+  /* ---------- LOBBY ---------- */
+  #lobby{
+    min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:10px; padding:24px;
+    text-align:center;
+  }
+  .brand-title{
+    font-size:38px; font-weight:800; color:var(--gold-dim); letter-spacing:.5px;
+    text-shadow:2px 2px 0 #ffd9b0;
+  }
+  .brand-sub{ font-size:13px; color:var(--steel-dim); letter-spacing:3px; margin-bottom:26px; font-weight:700; }
+  .lobby-btn{
+    width:280px; padding:16px; border-radius:999px; border:none;
+    font-size:16px; font-weight:700; letter-spacing:.5px; margin:6px 0;
+    transition:transform .12s ease, filter .12s ease, box-shadow .12s ease;
+  }
+  .lobby-btn:hover{ filter:brightness(1.05); transform:translateY(-2px); }
+  .btn-primary{ background:var(--gold); color:#fff; box-shadow:0 6px 0 var(--gold-dim); }
+  .btn-primary:hover{ box-shadow:0 8px 0 var(--gold-dim); }
+  .btn-secondary{
+    background:var(--bg-panel); color:var(--steel);
+    border:2px solid var(--steel) !important; box-shadow:0 4px 0 var(--steel-dim);
+  }
+  #joinBox{ display:none; flex-direction:column; align-items:center; gap:10px; margin-top:6px; }
+  #joinBox input{
+    width:280px; padding:14px; text-align:center; letter-spacing:6px;
+    font-size:20px; font-weight:700; text-transform:uppercase;
+    background:var(--bg-panel); color:var(--gold-dim); border:2px solid var(--cell-border);
+    border-radius:14px;
+  }
+  #lobbyMsg{ min-height:20px; color:var(--text-danger); font-size:13px; margin-top:10px; font-weight:600; }
+
+  /* ---------- GAME ---------- */
+  #game{ display:none; flex-direction:column; min-height:100vh; }
+  header{
+    background:var(--bg-header); padding:16px 28px; border-bottom:3px solid var(--cell-border);
+    display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;
+  }
+  header .left h2{ color:var(--gold-dim); font-size:20px; letter-spacing:.5px; }
+  header .left .room{ color:var(--text-muted); font-size:12px; margin-top:4px; font-weight:600; }
+  header .left button{
+    margin-top:6px; background:var(--steel); color:#fff; border:none;
+    border-radius:999px; padding:6px 12px; font-size:11px; font-weight:700;
+  }
+  header .right{ text-align:right; }
+  header .right .me{ font-weight:800; font-size:14px; }
+  header .right .turn{ font-size:12px; margin-top:4px; color:var(--text-muted); font-weight:600; }
+
+  main{ flex:1; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .board{ display:flex; gap:22px; flex-wrap:wrap; justify-content:center; }
+  .slice{
+    background:var(--bg-panel); border-radius:20px; padding:14px;
+    border:2px solid var(--cell-border);
+    box-shadow:0 6px 0 var(--cell-border);
+  }
+  .slice .slice-label{
+    text-align:center; font-size:12px; letter-spacing:2px; color:#fff; background:var(--steel);
+    margin-bottom:10px; font-weight:700; padding:4px 0; border-radius:999px;
+  }
+  .grid4{
+    display:grid; grid-template-columns:repeat(4, 52px); grid-template-rows:repeat(4, 52px);
+    gap:5px;
+  }
+  .cell{
+    background:var(--cell-bg); border:2px solid var(--cell-border); border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; font-weight:800; color:var(--text-light); font-family:var(--font-display);
+    transition:background .12s ease, border-color .12s ease, transform .08s ease;
+    user-select:none;
+  }
+  .cell.playable{ cursor:pointer; }
+  .cell.playable:hover{ background:var(--cell-hover); border-color:var(--steel); transform:scale(1.06); }
+  .cell.x{ color:var(--gold); }
+  .cell.o{ color:var(--steel); }
+  .cell.selected{ border-color:var(--gold); box-shadow:0 0 0 3px var(--gold) inset; background:#fff1e4; }
+  .cell.win{ background:var(--crimson); color:var(--crimson-text); border-color:var(--gold); }
+
+  footer{ background:var(--bg-header); padding:16px 20px 22px; text-align:center; border-top:3px solid var(--cell-border); }
+  .selection-row{ font-size:13px; color:var(--text-muted); margin-bottom:12px; letter-spacing:1px; font-weight:600; }
+  .selection-row span{ color:var(--gold-dim); font-weight:800; }
+  .btn-row{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .btn-row button{
+    border:none; border-radius:999px; padding:12px 22px; font-size:13px; font-weight:700; letter-spacing:.5px;
+  }
+  #confirmBtn{ background:var(--gold); color:#fff; box-shadow:0 5px 0 var(--gold-dim); }
+  #rematchBtn{ background:var(--bg-panel); color:var(--steel); border:2px solid var(--steel) !important; }
+  #leaveBtn{ background:var(--bg-panel); color:var(--text-danger); border:2px solid #f2c4c4 !important; }
+  #gameMsg{ margin-top:12px; font-size:12px; color:var(--text-muted); min-height:16px; font-weight:600; }
+
+  @media (max-width:900px){
+    .grid4{ grid-template-columns:repeat(4, 40px); grid-template-rows:repeat(4, 40px); }
+    .cell{ font-size:16px; }
+    .board{ gap:12px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ================= LOBBY ================= -->
+  <div id="lobby">
+    <div class="brand-title">TIC TAC TOE 3D</div>
+    <div class="brand-sub">EDICIÓN ONLINE</div>
+
+    <button class="lobby-btn btn-primary" id="createBtn">CREAR PARTIDA</button>
+    <button class="lobby-btn btn-secondary" id="showJoinBtn">UNIRSE A PARTIDA</button>
+
+    <div id="joinBox">
+      <input id="codeInput" maxlength="5" placeholder="CÓDIGO" />
+      <button class="lobby-btn btn-primary" id="joinBtn" style="width:280px;">ENTRAR</button>
+    </div>
+
+    <div id="lobbyMsg"></div>
+  </div>
+
+  <!-- ================= GAME ================= -->
+  <div id="game">
+    <header>
+      <div class="left">
+        <h2>TIC TAC TOE 3D</h2>
+        <div class="room">Sala: <b id="roomLabel">-</b></div>
+        <button id="copyBtn">Copiar código</button>
+      </div>
+      <div class="right">
+        <div class="me" id="meLabel">-</div>
+        <div class="turn" id="turnLabel">Conectando...</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="board" id="board"></div>
+    </main>
+
+    <footer>
+      <div class="selection-row">
+        Z: <span id="selZ">-</span> &nbsp; Y: <span id="selY">-</span> &nbsp; X: <span id="selX">-</span>
+      </div>
+      <div class="btn-row">
+        <button id="confirmBtn" disabled>CONFIRMAR JUGADA</button>
+        <button id="rematchBtn" disabled>NUEVA PARTIDA</button>
+        <button id="leaveBtn">SALIR</button>
+      </div>
+      <div id="gameMsg"></div>
+    </footer>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase, ref, set, get, update, onValue, off
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// ---------------------------------------------------------------------
+// CONFIGURA AQUI TU PROYECTO DE FIREBASE (Realtime Database)
+// ---------------------------------------------------------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyDXROuMWRsacCrINp22xDuvpjZXQcQAmpI",
+  authDomain: "tick-tack-toe-kaki.firebaseapp.com",
+  databaseURL: "https://tick-tack-toe-kaki-default-rtdb.firebaseio.com",
+  projectId: "tick-tack-toe-kaki",
+  storageBucket: "tick-tack-toe-kaki.firebasestorage.app",
+  messagingSenderId: "914692148423",
+  appId: "1:914692148423:web:2663473b1ee6c8b2ce02e2",
+  measurementId: "G-ER55E9X403"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ---------------------------------------------------------------------
+// LOGICA DEL TABLERO 4x4x4 (misma derivacion que la version de escritorio)
+// ---------------------------------------------------------------------
+const LINE_DEFS = [
+  (Z,Y,X) => Array.from({length:4}, (_,x)=>[Z,Y,x]),                 // horizontal
+  (Z,Y,X) => Array.from({length:4}, (_,y)=>[Z,y,X]),                 // vertical
+  (Z,Y,X) => Array.from({length:4}, (_,z)=>[z,Y,X]),                 // profundidad
+  (Z,Y,X) => Array.from({length:4}, (_,y)=>[Z,y,y]),                 // diag frontal 1
+  (Z,Y,X) => Array.from({length:4}, (_,y)=>[Z,y,3-y]),               // diag frontal 2
+  (Z,Y,X) => Array.from({length:4}, (_,z)=>[z,Y,z]),                 // diag horizontal 1
+  (Z,Y,X) => Array.from({length:4}, (_,z)=>[3-z,Y,z]),               // diag horizontal 2
+  (Z,Y,X) => Array.from({length:4}, (_,z)=>[z,z,X]),                 // diag vertical 1
+  (Z,Y,X) => Array.from({length:4}, (_,z)=>[3-z,z,X]),               // diag vertical 2
+  (Z,Y,X) => Array.from({length:4}, (_,x)=>[3-x,x,x]),               // diag cruzada 1
+  (Z,Y,X) => Array.from({length:4}, (_,x)=>[x,3-x,x]),               // diag cruzada 2
+  (Z,Y,X) => Array.from({length:4}, (_,y)=>[3-y,3-y,y]),             // diag cruzada 3
+  (Z,Y,X) => Array.from({length:4}, (_,z)=>[z,z,z]),                 // diag cruzada 4
+];
+
+function newEmptyBoard(){
+  return Array.from({length:4}, () =>
+    Array.from({length:4}, () => [0,0,0,0])
+  );
+}
+
+function findWinningLine(board, Z, Y, X){
+  for (const lineFn of LINE_DEFS){
+    const coords = lineFn(Z,Y,X);
+    let total = 0;
+    for (const [z,y,x] of coords) total += board[z][y][x];
+    if (total === 4 || total === -4) return coords;
+  }
+  return null;
+}
+
+function boardIsFull(board){
+  for (let z=0; z<4; z++)
+    for (let y=0; y<4; y++)
+      for (let x=0; x<4; x++)
+        if (board[z][y][x] === 0) return false;
+  return true;
+}
+
+function generateRoomCode(len=5){
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // sin 0/O/1/I para evitar confusiones
+  let out = "";
+  for (let i=0; i<len; i++) out += alphabet[Math.floor(Math.random()*alphabet.length)];
+  return out;
+}
+
+const PLAYER_LABELS = {0:"Jugador 1 (O)", 1:"Jugador 2 (X)"};
+
+// ---------------------------------------------------------------------
+// ESTADO LOCAL
+// ---------------------------------------------------------------------
+let roomId = null;
+let playerIndex = null;
+let unsubscribe = null;
+
+let board = newEmptyBoard();
+let turn = 0;
+let status = "waiting";
+let winner = null;
+let winLine = null;
+
+let selected = {Z:null, Y:null, X:null};
+
+// ---------------------------------------------------------------------
+// DOM refs
+// ---------------------------------------------------------------------
+const lobbyEl = document.getElementById("lobby");
+const gameEl = document.getElementById("game");
+const lobbyMsg = document.getElementById("lobbyMsg");
+const joinBox = document.getElementById("joinBox");
+const codeInput = document.getElementById("codeInput");
+
+const roomLabel = document.getElementById("roomLabel");
+const meLabel = document.getElementById("meLabel");
+const turnLabel = document.getElementById("turnLabel");
+const boardEl = document.getElementById("board");
+const selZ = document.getElementById("selZ");
+const selY = document.getElementById("selY");
+const selX = document.getElementById("selX");
+const confirmBtn = document.getElementById("confirmBtn");
+const rematchBtn = document.getElementById("rematchBtn");
+const leaveBtn = document.getElementById("leaveBtn");
+const gameMsg = document.getElementById("gameMsg");
+
+// ---------------------------------------------------------------------
+// Construir el tablero (4 capas Z, cada una una grilla 4x4 de Y/X)
+// ---------------------------------------------------------------------
+const cellEls = []; // cellEls[z][y][x]
+for (let z=0; z<4; z++){
+  const slice = document.createElement("div");
+  slice.className = "slice";
+  const label = document.createElement("div");
+  label.className = "slice-label";
+  label.textContent = "CAPA Z" + z;
+  slice.appendChild(label);
+
+  const grid = document.createElement("div");
+  grid.className = "grid4";
+  cellEls.push([]);
+  for (let y=0; y<4; y++){
+    cellEls[z].push([]);
+    for (let x=0; x<4; x++){
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.z = z; cell.dataset.y = y; cell.dataset.x = x;
+      cell.addEventListener("click", () => onCellClick(z,y,x));
+      grid.appendChild(cell);
+      cellEls[z][y].push(cell);
+    }
+  }
+  slice.appendChild(grid);
+  boardEl.appendChild(slice);
+}
+
+// ---------------------------------------------------------------------
+// LOBBY: crear / unirse
+// ---------------------------------------------------------------------
+document.getElementById("createBtn").addEventListener("click", createRoom);
+document.getElementById("showJoinBtn").addEventListener("click", () => {
+  joinBox.style.display = "flex";
+  codeInput.focus();
+});
+document.getElementById("joinBtn").addEventListener("click", () => joinRoom(codeInput.value));
+codeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") joinRoom(codeInput.value); });
+
+async function createRoom(){
+  lobbyMsg.textContent = "";
+  const code = generateRoomCode();
+  const data = {
+    board: newEmptyBoard(),
+    turn: 0,
+    status: "waiting",
+    winner: null,
+    winLine: null,
+    players: {0: true},
+  };
+  try{
+    await set(ref(db, "games/" + code), data);
+  }catch(err){
+    lobbyMsg.textContent = "No se pudo crear la sala: " + err.message;
+    return;
+  }
+  enterGame(code, 0);
+}
+
+async function joinRoom(raw){
+  lobbyMsg.textContent = "";
+  const code = (raw || "").trim().toUpperCase();
+  if (!code){ lobbyMsg.textContent = "Escribe un código de sala."; return; }
+  let snap;
+  try{
+    snap = await get(ref(db, "games/" + code));
+  }catch(err){
+    lobbyMsg.textContent = "Error de conexión: " + err.message;
+    return;
+  }
+  if (!snap.exists()){
+    lobbyMsg.textContent = "Ese código de sala no existe.";
+    return;
+  }
+  const data = snap.val();
+  const players = data.players || {};
+  if (players["1"] && data.status !== "waiting"){
+    lobbyMsg.textContent = "Esa partida ya tiene 2 jugadores.";
+    return;
+  }
+  try{
+    await update(ref(db, "games/" + code), {"players/1": true, status: "playing"});
+  }catch(err){
+    lobbyMsg.textContent = "No se pudo unir a la sala: " + err.message;
+    return;
+  }
+  enterGame(code, 1);
+}
+
+// ---------------------------------------------------------------------
+// ENTRAR A LA PARTIDA
+// ---------------------------------------------------------------------
+function enterGame(code, idx){
+  roomId = code;
+  playerIndex = idx;
+
+  lobbyEl.style.display = "none";
+  gameEl.style.display = "flex";
+
+  roomLabel.textContent = code;
+  meLabel.textContent = "Tú eres: " + PLAYER_LABELS[idx];
+  meLabel.style.color = idx === 0 ? "var(--steel)" : "var(--gold)";
+
+  unsubscribe = onValue(ref(db, "games/" + code), (snap) => {
+    const data = snap.val();
+    if (!data) return;
+    applyState(data);
+  });
+}
+
+function applyState(data){
+  board = data.board || newEmptyBoard();
+  turn = data.turn ?? 0;
+  status = data.status || "waiting";
+  winner = (data.winner === undefined) ? null : data.winner;
+  winLine = data.winLine || null;
+  selected = {Z:null, Y:null, X:null};
+  render();
+}
+
+// ---------------------------------------------------------------------
+// SELECCIONAR CELDA / CONFIRMAR JUGADA
+// ---------------------------------------------------------------------
+function isMyTurn(){
+  return status === "playing" && turn === playerIndex;
+}
+
+function onCellClick(z,y,x){
+  if (!isMyTurn()) return;
+  if (board[z][y][x] !== 0) return;
+  selected = {Z:z, Y:y, X:x};
+  render();
+}
+
+confirmBtn.addEventListener("click", makeMove);
+
+async function makeMove(){
+  if (!isMyTurn()) return;
+  const {Z,Y,X} = selected;
+  if (Z === null || Y === null || X === null){
+    gameMsg.textContent = "Selecciona una celda antes de confirmar.";
+    return;
+  }
+  if (board[Z][Y][X] !== 0){
+    gameMsg.textContent = "Esa celda ya está ocupada.";
+    return;
+  }
+
+  const newBoard = JSON.parse(JSON.stringify(board));
+  const value = playerIndex === 0 ? -1 : 1;
+  newBoard[Z][Y][X] = value;
+
+  const line = findWinningLine(newBoard, Z, Y, X);
+  let payload;
+  if (line){
+    payload = { board:newBoard, status:"finished", winner:playerIndex, winLine:line };
+  } else if (boardIsFull(newBoard)){
+    payload = { board:newBoard, status:"finished", winner:null, winLine:null };
+  } else {
+    payload = { board:newBoard, turn: 1 - turn, status:"playing" };
+  }
+
+  try{
+    await update(ref(db, "games/" + roomId), payload);
+  }catch(err){
+    gameMsg.textContent = "Error de red: " + err.message;
+    return;
+  }
+
+  // respuesta inmediata en pantalla, sin esperar el eco del servidor
+  board = newBoard;
+  turn = payload.turn ?? turn;
+  status = payload.status;
+  winner = ("winner" in payload) ? payload.winner : winner;
+  winLine = line;
+  selected = {Z:null, Y:null, X:null};
+  render();
+}
+
+rematchBtn.addEventListener("click", async () => {
+  if (status !== "finished") return;
+  const payload = {
+    board:newEmptyBoard(), turn:0, status:"playing", winner:null, winLine:null,
+  };
+  try{
+    await update(ref(db, "games/" + roomId), payload);
+  }catch(err){
+    gameMsg.textContent = "Error de red: " + err.message;
+  }
+});
+
+leaveBtn.addEventListener("click", () => {
+  if (!confirm("¿Quieres salir de la partida?")) return;
+  if (unsubscribe){ unsubscribe(); unsubscribe = null; }
+  roomId = null; playerIndex = null;
+  board = newEmptyBoard(); turn = 0; status = "waiting"; winner = null; winLine = null;
+  gameEl.style.display = "none";
+  lobbyEl.style.display = "flex";
+  joinBox.style.display = "none";
+  codeInput.value = "";
+  lobbyMsg.textContent = "";
+});
+
+document.getElementById("copyBtn").addEventListener("click", () => {
+  if (roomId) navigator.clipboard.writeText(roomId);
+});
+
+// ---------------------------------------------------------------------
+// RENDER
+// ---------------------------------------------------------------------
+function render(){
+  const winSet = new Set((winLine || []).map(([z,y,x]) => `${z}-${y}-${x}`));
+
+  for (let z=0; z<4; z++){
+    for (let y=0; y<4; y++){
+      for (let x=0; x<4; x++){
+        const cell = cellEls[z][y][x];
+        const val = board[z][y][x];
+        cell.className = "cell";
+        cell.textContent = "";
+
+        if (val === 1){ cell.classList.add("x"); cell.textContent = "X"; }
+        else if (val === -1){ cell.classList.add("o"); cell.textContent = "O"; }
+
+        if (winSet.has(`${z}-${y}-${x}`)) cell.classList.add("win");
+
+        const playable = isMyTurn() && val === 0;
+        if (playable) cell.classList.add("playable");
+
+        if (selected.Z === z && selected.Y === y && selected.X === x){
+          cell.classList.add("selected");
+        }
+      }
+    }
+  }
+
+  selZ.textContent = selected.Z ?? "-";
+  selY.textContent = selected.Y ?? "-";
+  selX.textContent = selected.X ?? "-";
+
+  const hasSelection = selected.Z !== null && selected.Y !== null && selected.X !== null;
+  confirmBtn.disabled = !(isMyTurn() && hasSelection);
+  rematchBtn.disabled = status !== "finished";
+
+  if (status === "waiting"){
+    turnLabel.textContent = "Esperando al Jugador 2...";
+    turnLabel.style.color = "var(--text-muted)";
+    gameMsg.textContent = `Comparte el código "${roomId}" con tu rival.`;
+  } else if (status === "playing"){
+    const name = PLAYER_LABELS[turn];
+    turnLabel.textContent = "Turno de: " + name;
+    turnLabel.style.color = turn === 0 ? "var(--steel)" : "var(--gold)";
+    gameMsg.textContent = isMyTurn()
+      ? "Es tu turno: haz clic en una celda y confirma."
+      : "Esperando la jugada del rival...";
+  } else { // finished
+    if (winner === null){
+      turnLabel.textContent = "Empate";
+      turnLabel.style.color = "var(--text-muted)";
+      gameMsg.textContent = "Tablero completo, sin ganador.";
+    } else {
+      const name = PLAYER_LABELS[winner];
+      turnLabel.textContent = "Ganó: " + name;
+      turnLabel.style.color = winner === 0 ? "var(--steel)" : "var(--gold)";
+      gameMsg.textContent = winner === playerIndex ? "¡Ganaste la partida!" : "Tu rival ganó esta partida.";
+    }
+  }
+}
+
+render();
+</script>
+</body>
+</html>
